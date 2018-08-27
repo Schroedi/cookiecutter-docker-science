@@ -46,7 +46,7 @@ Quick start
 
 To generate project from the cookiecutter-doccker-science template, please run the following command.
 
-``$cookiecutter git@github.com:docker-science/cookiecutter-docker-science.git``
+``$cookiecutter git@github.com:Schroedi/cookiecutter-docker-science.git``
 
 Then the cookiecutter command ask for several questions on generated project as follows.
 
