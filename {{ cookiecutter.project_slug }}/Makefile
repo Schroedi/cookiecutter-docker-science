@@ -1,4 +1,4 @@
-.PHONY: clean clean-model clean-pyc docs help init init-docker create-container start-container jupyter test lint profile clean clean-data clean-docker clean-container clean-image sync-from-source sync-to-source
+.PHONY: clean clean-model clean-pyc docs help init init-docker create-container start-container attach-container jupyter test lint profile clean clean-data clean-docker clean-container clean-image sync-from-source sync-to-source
 .DEFAULT_GOAL := help
 
 ###########################################################################################################
@@ -55,13 +55,13 @@ export DOCKERFILE=docker/Dockerfile
 help:
 	@$(PYTHON) -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
-init: init-docker sync-from-source ## initialize repository for traning
+init: init-docker sync-from-sour cecreate-container ## initialize repository for traning
 
 sync-from-source: ## download data data source to local envrionment
 {%- if cookiecutter.data_source_type == 's3' %}
 	-aws s3 sync $(DATA_SOURCE) ./data/
 {%- elif cookiecutter.data_source_type == 'nfs' %}
-	cp -r $(DATA_SOURCE)/* ./data/
+#	cp -r $(DATA_SOURCE)/* ./data/
 {%- elif cookiecutter.data_source_type == 'url' %}
 	wget $(DATA_SOURCE) -P ./data/
 {% endif %}
@@ -79,11 +79,16 @@ sync-to-source: ## sync local data to data source
 {% endif %}
 
 create-container: ## create docker container
-	$(DOCKER) run -it -v $(PWD):/work -p $(JUPYTER_HOST_PORT):$(JUPYTER_CONTAINER_PORT) --name $(CONTAINER_NAME) $(IMAGE_NAME)
+	$(DOCKER) run --ipc=host -it --init -v $(PWD):/work -p $(JUPYTER_HOST_PORT):$(JUPYTER_CONTAINER_PORT) --name $(CONTAINER_NAME) $(IMAGE_NAME)
 
-start-container: ## start docker container
+start-container: ## start bash in docker container
 	@echo "$$START_DOCKER_CONTAINER" | $(SHELL)
 	@echo "Launched $(CONTAINER_NAME)..."
+	$(DOCKER) exec -it $(CONTAINER_NAME) bash
+	
+attach-container: ## attach to first session of container
+	@echo "$$START_DOCKER_CONTAINER" | $(SHELL)
+	@echo "New session in $(CONTAINER_NAME)..."
 	$(DOCKER) attach $(CONTAINER_NAME)
 
 jupyter: ## start Jupyter Notebook server
@@ -104,7 +109,7 @@ profile: ## show profile of the project
 clean: clean-model clean-pyc clean-docker ## remove all artifacts
 
 clean-model: ## remove model artifacts
-	rm -fr model/*
+#	rm -fr model/*
 
 clean-pyc: ## remove Python file artifacts
 	find . -name '*.pyc' -exec rm -f {} +
@@ -115,11 +120,12 @@ clean-pyc: ## remove Python file artifacts
 distclean: clean clean-data ## remove all the reproducible resources including Docker images
 
 clean-data: ## remove files under data
-	rm -fr data/*
+#	rm -fr data/*
 
 clean-docker: clean-container clean-image ## remove Docker image and container
 
 clean-container: ## remove Docker container
+	-$(DOCKER) stop $(CONTAINER_NAME)
 	-$(DOCKER) rm $(CONTAINER_NAME)
 
 clean-image: ## remove Docker image
